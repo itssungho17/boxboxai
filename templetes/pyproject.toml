@@ -1,17 +1,16 @@
 [project]
 name = "boxboxai"
 version = "0.1.0"
-description = "BoxBoxAI: Local-first RAG + Multi-Agent deep research backend"
-readme = "README.md"
-requires-python = ">=3.12,<3.13"
+description = "BoxBoxAI: Local-first CRAG + Multi-Agent deep research backend"
+authors = [
+    { name = "Sung-Ho Son" },
+]
 license = { text = "MIT" }
-authors = [{ name = "Sung-Ho Son" }]
+readme = "README.md"
+requires-python = ">=3.12"
 dependencies = [
     # Web/API
     "fastapi",
-    "uvicorn[standard]",
-    "pydantic>=2",
-    "sse-starlette",
 
     # LangChain
     "langchain",
@@ -22,14 +21,8 @@ dependencies = [
     "langgraph",
     "langsmith",
 
-    # Vector & RAG Core
-    "qdrant-client",
-
     # Observability/Utils
-    "orjson",
-    "loguru",
     "python-dotenv",
-    "httpx>=0.24",
 ]
 
 [project.optional-dependencies]
@@ -40,12 +33,11 @@ requires = ["setuptools>=73.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["crag_graph", "deep_research_graph"]
-include-package-data = true
+packages = ["langgraph.templates.retrieval_graph", "retrieval_graph"]
 
 [tool.setuptools.package-dir]
-"crag_graph" = "backend/crag_graph"
-"deep_research_graph" = "backend/deep_research_graph"
+"langgraph.templates.retrieval_graph" = "src/retrieval_graph"
+"retrieval_graph" = "src/retrieval_graph"
 
 [tool.setuptools.package-data]
 "*" = ["py.typed"]

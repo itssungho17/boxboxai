@@ -1,8 +1,8 @@
 {
   "dependencies": ["."],
   "graphs": {
-    "indexer": "./src/retrieval_graph/index_graph.py:graph",
-    "retrieval_graph": "./src/retrieval_graph/graph.py:graph"
+    "crag_graph": "./backend/crag_graph/graph.py:graph",
+    "deep_research_graph": "./backend/deep_research_graph/graph.py:graph"
   },
   "env": ".env"
 }
