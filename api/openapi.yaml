@@ -1,0 +1,345 @@
+openapi: 3.1.0
+info:
+  title: BoxBox AI API
+  version: 0.1.0
+  description: API design for BoxBox AI
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+
+servers:
+  - url: /api/v1
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+
+  parameters:
+    PageParam:
+      in: query
+      name: page
+      schema: { type: integer, minimum: 1, default: 1 }
+      description: 1-based page index
+    LimitParam:
+      in: query
+      name: limit
+      schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      description: items per page
+
+  headers:
+    XRequestId:
+      description: Correlates logs/traces
+      schema: { type: string, example: "req_01J8Q0MS9XEZM7K3R4F7B4YQ2Z" }
+    XRateLimitRemaining:
+      description: Requests remaining in the current window
+      schema: { type: integer, example: 100 }
+
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: "invalid_argument" }
+            message: { type: string, example: "title must not be empty" }
+            details: { type: object }
+          required: [code, message]
+      required: [error]
+
+    ChatRoom:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "Dutch Grand Prix 2025 - F1 Race"
+        metadata:
+          type: object
+          additionalProperties: true
+          example: { "track": "Zandvoort", "team": "McLaren" }
+        archived:
+          type: boolean
+          default: false
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-09-01T12:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-09-01T12:00:00Z"
+      required: [id, title, created_at]
+
+    ChatRoomsPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ChatRoom" }
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 40
+      required: [items, page, limit, total]
+
+    CreateChatRoomRequest:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200, example: "Monza Debrief" }
+        metadata: { type: object, additionalProperties: true, example: { "team": "McLaren", "session": "Race" } }
+      required: [title]
+
+    QueryRequest:
+      type: object
+      properties:
+        query:
+          type: string
+          minLength: 1
+          example: "맥라렌의 2025 시즌 전략을 요약해줘"
+        room_id:
+          type: string
+          format: uuid
+          description: ChatRoom ID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        mode:
+          type: string
+          description: 선택적 라우팅 모드 (H=Hard, M=Medium, S=Soft)
+          enum: [H, M, S]
+          example: "H"
+      required: [query]
+
+security:
+  - bearerAuth: []
+  - apiKeyAuth: []
+
+paths:
+  /rooms:
+    post:
+      tags: ["rooms"]
+      operationId: createChatRoom
+      summary: Create a chat room
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateChatRoomRequest' }
+      responses:
+        "201":
+          description: Created
+          headers:
+            Location:
+              description: URL of the created chat room
+              schema: { type: string, example: "/api/v1/rooms/550e8400-e29b-41d4-a716-446655440000" }
+            X-Request-Id: { $ref: '#/components/headers/XRequestId' }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatRoom" }
+        "400": { $ref: '#/components/responses/BadRequest' }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "429": { $ref: '#/components/responses/TooManyRequests' }
+        "500": { $ref: '#/components/responses/InternalError' }
+
+    get:
+      tags: ["rooms"]
+      operationId: listChatRooms
+      summary: List chat rooms (paged)
+      description: Returns chat rooms ordered by created_at DESC by default.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-RateLimit-Remaining: { $ref: '#/components/headers/XRateLimitRemaining' }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatRoomsPage" }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "429": { $ref: '#/components/responses/TooManyRequests' }
+        "500": { $ref: '#/components/responses/InternalError' }
+
+  /rooms/{room_id}:
+    get:
+      tags: ["rooms"]
+      operationId: getChatRoom
+      summary: Get a chat room (rejoin)
+      parameters:
+        - in: path
+          name: room_id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-Id: { $ref: '#/components/headers/XRequestId' }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatRoom" }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "404": { $ref: '#/components/responses/NotFound' }
+        "429": { $ref: '#/components/responses/TooManyRequests' }
+        "500": { $ref: '#/components/responses/InternalError' }
+
+    delete:
+      tags: ["rooms"]
+      operationId: deleteChatRoom
+      summary: Delete a chat room
+      parameters:
+        - in: path
+          name: room_id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: No Content
+          headers:
+            X-Request-Id: { $ref: '#/components/headers/XRequestId' }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "404": { $ref: '#/components/responses/NotFound' }
+        "429": { $ref: '#/components/responses/TooManyRequests' }
+        "500": { $ref: '#/components/responses/InternalError' }
+
+  /query/stream:
+    post:
+      tags: ["query"]
+      operationId: queryStream
+      summary: Query LLM with SSE streaming response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QueryRequest" }
+      responses:
+        "200":
+          description: Server-Sent Events stream
+          headers:
+            X-Request-Id: { $ref: '#/components/headers/XRequestId' }
+          content:
+            text/event-stream:
+              schema: { type: string }
+              examples:
+                sample:
+                  summary: Example SSE stream
+                  value: |
+                    event: token
+                    data: {"text":"맥라렌은 2025 시즌에서 강력한 업그레이드를 준비 중입니다."}
+
+                    event: sources
+                    data: [{"id":"doc1","score":0.42,"snippet":"Bahrain GP FP2 analysis..."}]
+
+                    event: done
+                    data: {}
+        "400": { $ref: '#/components/responses/BadRequest' }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "429": { $ref: '#/components/responses/TooManyRequests' }
+        "500": { $ref: '#/components/responses/InternalError' }
+
+  /health:
+    get:
+      tags: ["health"]
+      operationId: health
+      summary: Health check
+      security: []  # public
+      responses:
+        "200":
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  version: { type: string, example: 0.1.0 }
+                  uptime_sec: { type: number, example: 1234.56 }
+                  components:
+                    type: object
+                    additionalProperties: { type: string, example: ok }
+
+  /auth/me:
+    get:
+      tags: ["auth"]
+      operationId: authMe
+      summary: Validate authentication token and return user info
+      responses:
+        "200":
+          description: Authenticated user info
+          headers:
+            X-Request-Id: { $ref: '#/components/headers/XRequestId' }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid, example: "3c7c12f0-9a8e-4c2e-9f6d-4b8a4a1d2f11" }
+                      email: { type: string, format: email, example: "lando@norris.com" }
+                      roles:
+                        type: array
+                        items: { type: string }
+                    required: [id, email]
+                  auth:
+                    type: object
+                    properties:
+                      method: { type: string, example: "jwt" }
+                      exp: { type: integer, example: 1725000000 }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "429": { $ref: '#/components/responses/TooManyRequests' }
+        "500": { $ref: '#/components/responses/InternalError' }
