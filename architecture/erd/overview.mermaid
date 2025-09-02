@@ -1,0 +1,42 @@
+erDiagram
+  AUTH_USERS {
+    uuid id PK
+    citext email "UNIQUE"
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  AUTH_API_KEYS {
+    uuid id PK
+    uuid user_id FK
+    text name
+    text key_hash
+    bool active
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  CHAT_ROOMS {
+    uuid id PK
+    uuid owner_id FK
+    varchar(200) title
+    jsonb metadata
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  QUERY_REQUESTS {
+    uuid id PK
+    uuid room_id FK
+    text query_text
+    query_mode mode      "H|M|S"
+    bool trace
+    query_status status  "pending|succeeded|failed|canceled"
+    text error_msg
+    timestamptz created_at
+    timestamptz finished_at
+  }
+
+  AUTH_USERS ||--o{ AUTH_API_KEYS : has
+  AUTH_USERS ||--o{ CHAT_ROOMS : owns
+  CHAT_ROOMS ||--o{ QUERY_REQUESTS : contains

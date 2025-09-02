@@ -1,0 +1,75 @@
+classDiagram
+
+%% === Domain ===
+class AuthUser {
+  +UUID id
+  +string email
+  +DateTime createdAt
+  +DateTime updatedAt
+}
+
+class ApiKey {
+  +UUID id
+  +UUID userId
+  +string name
+  +string keyHash
+  +bool active
+  +DateTime createdAt
+  +DateTime updatedAt
+}
+
+class ChatRoom {
+  +UUID id
+  +UUID ownerId
+  +string title
+  +Map metadata
+  +DateTime createdAt
+  +DateTime updatedAt
+}
+
+class QueryRequest {
+  +UUID id
+  +UUID roomId
+  +string queryText
+  +string mode   // H|M|S
+  +bool trace
+  +string status // pending|succeeded|failed|canceled
+  +string errorMsg
+  +DateTime createdAt
+  +DateTime finishedAt
+}
+
+AuthUser "1" --> "0..*" ApiKey
+AuthUser "1" --> "0..*" ChatRoom
+ChatRoom "1" --> "0..*" QueryRequest
+
+%% === Services ===
+class RoomService {
+  +createRoom()
+  +listRooms()
+  +getRoom()
+  +deleteRoom()
+}
+
+class QueryService {
+  +streamQuery()
+}
+
+class AuthService {
+  +me()
+}
+
+%% === Controllers ===
+class RoomsController
+class QueryController
+class AuthController
+
+%% Relations
+RoomsController --> RoomService
+QueryController --> QueryService
+AuthController --> AuthService
+
+RoomService --> ChatRoom
+QueryService --> QueryRequest
+AuthService --> AuthUser
+AuthService --> ApiKey

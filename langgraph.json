@@ -1,8 +1,8 @@
 {
   "dependencies": ["."],
   "graphs": {
-    "crag_graph": "./backend/crag_graph/graph.py:graph",
-    "deep_research_graph": "./backend/deep_research_graph/graph.py:graph"
+    "crag_graph": "./backend/ai/crag_graph/graph.py:graph",
+    "deep_research_graph": "./backend/ai/deep_research_graph/graph.py:graph"
   },
   "env": ".env"
 }
